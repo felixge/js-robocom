@@ -1,10 +1,25 @@
 $(function() {
   var TIMEOUT = 0;
 
+  var programs = {};
+  Program.load('js/program/flooder.js', function(program) {
+    programs.red = program;
+    onProgramLoad();
+  });
   Program.load('js/program/spinner.js', function(program) {
-    var game = Game.create(32);
-    game.add('red', program);
-    game.add('blue', program);
+    programs.blue = program;
+    onProgramLoad();
+  });
+
+
+  function onProgramLoad() {
+    if (Object.keys(programs).length < 2) {
+      return;
+    }
+
+    var game = Game.create(20);
+    game.add('red', programs.red);
+    game.add('blue', programs.blue);
 
     var visualizer = Visualizer.create($('.js_container'));
     visualizer.render(game);
@@ -12,7 +27,7 @@ $(function() {
     var interval;
     function continueGame() {
       interval = setInterval(function() {
-        game.nextStep();
+        game.nextTick();
       }, TIMEOUT);
     }
 
@@ -32,23 +47,5 @@ $(function() {
     });
 
     continueGame();
-  });
-
-  //var grid = Grid.create(8);
-  //var visualizer = Visualizer.create();
-
-  //var SIZE = 8;
-  //var html = ['<table>'];
-
-  //for (var a = 0; a < SIZE; a++) {
-    //html.push('<tr>');
-    //for (var b = 0; b < SIZE; b++) {
-      //html.push('<td>' + a + ', ' + b + '</td>');
-    //}
-    //html.push('</tr>');
-  //}
-
-  //html.push('</table>');
-
-  //$('.js_grid_container').html(html.join('\n'));
+  };
 });

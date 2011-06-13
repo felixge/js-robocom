@@ -17,6 +17,7 @@ Visualizer.prototype.render = function(game) {
   this._renderGrid();
 
   game.on('rotate', this._handleRotate.bind(this));
+  game.on('move', this._handleMove.bind(this));
   game.on('spawn', this._handleSpawn.bind(this));
   game.on('death', this._handleDeath.bind(this));
 };
@@ -67,6 +68,17 @@ Visualizer.prototype._handleRotate = function(robot) {
   $td
     .attr('class', '')
     .addClass('rotate_' + rotation);
+};
+
+Visualizer.prototype._handleMove = function(robot, oldCoordinates) {
+  var newCoordinates = robot.getCoordinates();
+
+  var $oldTd = this._getTd(oldCoordinates);
+  var $newTd = this._getTd(newCoordinates);
+
+  $newTd.append($oldTd.children().remove());
+  $newTd.attr('class', $oldTd.attr('class'));
+  $oldTd.attr('class', '');
 };
 
 Visualizer.prototype._handleSpawn = function(robot) {

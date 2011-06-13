@@ -2,7 +2,11 @@ function Robot() {
   this._a = null;
   this._b = null;
   this._rotation = null;
-  this._operation = null;
+
+  this._currentProgram = 'main';
+  this._currentArgs = [];
+  this._currentInstruction = 'init';
+  this._remainingCycles = 0;
 
   this._code = null;
   this._game = null;
@@ -62,6 +66,21 @@ Robot.prototype.rotate = function(direction) {
   this._game.emit('rotate', this);
 };
 
+Robot.prototype.move = function() {
+  var newCoordinates = this._game._getCoordinatesInFrontOf(this);
+  if (this._game._getRobot(newCoordinates.a, newCoordinates.b)) {
+    return;
+  }
+
+  var oldCoordinates = this.getCoordinates();
+  this.setCoordinates(newCoordinates.a, newCoordinates.b);
+
+  this._game._removeRobot(oldCoordinates.a, oldCoordinates.b);
+  this._game._setRobot(newCoordinates.a, newCoordinates.b, this);
+
+  this._game.emit('move', this, oldCoordinates);
+};
+
 Robot.prototype.build = function() {
   this._game.buildRobot(this);
 };
@@ -72,24 +91,63 @@ Robot.prototype.scan = function() {
   //if (
 };
 
-Robot.prototype.nextStep = function() {
-  var operation = this._operation || 'ready';
-  this._invoke(operation);
+Robot._getCallbackName = function(instruction) {
+  var firstLetter = instruction.substr(0, 1);
+  var remainingLetters = instruction.substr(1);
 
+  return 'after' + firstLetter.toUpperCase() + remainingLetters;
 };
 
-Robot.prototype._invoke = function(operation) {
-  var name = operation.substr(0, 1).toUpperCase() + operation.substr(1);
-  var r = this._code.main['after' + name].apply({}, this._args);
-  this._args = [];
+Robot.prototype.nextTick = function() {
+  if (this._remainingCycles > 0) {
+    this._remainingCycles--;
+    return;
+  }
 
-  if (!r) {
+  var executeFn = instructions[this._currentInstruction].execute;
+  var resultArgs = executeFn.call({}, this._game, this, this._currentArgs);
+  if (resultArgs) {
+    resultArgs = [].concat(resultArgs);
+  }
+
+  var callbackName = Robot._getCallbackName(this._currentInstruction);
+  var callbackFn = this._code[this._currentProgram][callbackName];
+
+  if (!callbackFn) {
+    console.log('missing callback: ' + callbackName);
     this._commitSuicide();
     return;
   }
 
-  this._operation = r.shift();
-  this[this._operation].apply(this, r);
+  var nextArgs = callbackFn.apply({}, resultArgs || []);
+  if (!nextArgs) {
+    console.log('emtpy method: ' + callbackName);
+    this._commitSuicide();
+    return;
+  }
+  var nextInstruction = nextArgs.shift();
+
+  if (!(nextInstruction in instructions)) {
+    console.log('unknown instruction: ' + nextInstruction);
+    this._commitSuicide();
+    return;
+  }
+
+  var costs = instructions[nextInstruction].costs;
+  if (typeof costs === 'function') {
+    costs = costs.call({}, this._game, this);
+  }
+
+  if (costs instanceof Error) {
+    console.log('costs error: ' + costs.message);
+    this._commitSuicide();
+    return;
+  }
+
+  this._remainingCycles = costs;
+  this._currentInstruction = nextInstruction;
+  this._currentArgs = nextArgs;
+  //console.log(this._currentInstruction, this._currentArgs);
 };
 
 Robot.prototype._commitSuicide = function() {

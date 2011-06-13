@@ -52,12 +52,18 @@ Game.prototype._getRobot = function(a, b) {
   return this._cells[a][b];
 };
 
+Game.prototype._removeRobot = function(a, b) {
+  this._cells[a][b] = null;
+};
+
 Game.prototype._setRobot = function(a, b, robot) {
   this._cells[a][b] = robot;
   robot.setCoordinates(a, b);
 };
 
 Game.prototype.kill = function(robot) {
+  var coordinates = robot.getCoordinates();
+  this._removeRobot(coordinates.a, coordinates.b);
   var index = this._robots.indexOf(robot);
   this._robots.splice(index, 1);
   this.emit('death', robot);
@@ -75,7 +81,7 @@ Game.prototype.isFirstStep = function() {
   return this._step === 1;
 };
 
-Game.prototype.nextStep = function() {
+Game.prototype.nextTick = function() {
   this._step++;
 
   if (this.isFirstStep()) {
@@ -83,8 +89,9 @@ Game.prototype.nextStep = function() {
     return;
   }
 
+  var self = this;
   this.getRobots().forEach(function(robot) {
-    robot.nextStep();
+    robot.nextTick();
   });
 };
 

@@ -1,11 +1,11 @@
 main: {
-  afterReady: function() {
+  afterInit: function() {
     return ['build'];
   },
   afterBuild: function() {
-    return ['rotate', 'right'];
+    return ['rotate', 'left'];
   },
   afterRotate: function() {
     return ['build'];
-  }
+  },
 }
